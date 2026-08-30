@@ -18,10 +18,11 @@ app.get("/api/recipe", async (req, res) => {
   scripts.each((i, el) => {
     try {
       const data = JSON.parse($(el).html());
+      console.log(JSON.stringify(data).slice(0, 300));
       if (data["@type"] === "Recipe") {
         recipeData = data;
       } else if (data["@graph"]) {
-        recipeData = data["@graph"].find(item => item["@type"] === "Recipe")
+        recipeData = data["@graph"].find((item) => item["@type"] === "Recipe");
       }
     } catch (e) {
       console.log("Couldn't parse one:", e);
