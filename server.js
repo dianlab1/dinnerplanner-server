@@ -23,6 +23,8 @@ app.get("/api/recipe", async (req, res) => {
         recipeData = data;
       } else if (data["@graph"]) {
         recipeData = data["@graph"].find((item) => item["@type"] === "Recipe");
+      } else if (Array.isArray(data)) {
+        recipeData = data.find((item) => item["@type"] === "Recipe");
       }
     } catch (e) {
       console.log("Couldn't parse one:", e);
