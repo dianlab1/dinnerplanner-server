@@ -1,39 +1,67 @@
-const express = require("express");
-const cheerio = require("cheerio");
-const cors = require("cors");
+getRecipe.addEventListener("click", async () => {
 
-const app = express();
-app.use(cors());
+  const url = linkInput.value.trim();
+  const recipeResultDiv = document.getElementById("recipeResult");
 
-app.get("/api/recipe", async (req, res) => {
-  const targetUrl = req.query.url;
-  const response = await fetch(targetUrl);
-  const html = await response.text();
+  if (!url) {
+    recipeResultDiv.innerHTML = "<p>Please paste a recipe link first.</p>";
+    return;
+  }
 
-  const $ = cheerio.load(html);
-  const scripts = $('script[type="application/ld+json"]');
+  recipeResultDiv.innerHTML = "<p>Fetching recipe...</p>";
 
-  let recipeData = null;
+  const serverUrl =
+    "https://dinnerplanner-server.onrender.com/api/recipe?url=" +
+    encodeURIComponent(url);
 
-  scripts.each((i, el) => {
-    try {
-      const data = JSON.parse($(el).html());
-      console.log(JSON.stringify(data).slice(0, 300));
-      if (data["@type"] === "Recipe") {
-        recipeData = data;
-      } else if (data["@graph"]) {
-        recipeData = data["@graph"].find((item) => item["@type"] === "Recipe");
-      } else if (Array.isArray(data)) {
-        recipeData = data.find((item) => item["@type"] === "Recipe");
-      }
-    } catch (e) {
-      console.log("Couldn't parse one:", e);
+  try {
+
+    const response = await fetch(serverUrl);
+
+    const recipeData = await response.json();
+
+    if (!response.ok) {
+      throw new Error(recipeData.error || "Failed to fetch recipe");
     }
-  });
 
-  res.json(recipeData);
-});
+    if (!recipeData.recipeIngredient ||
+        !recipeData.recipeInstructions) {
+      throw new Error("Recipe data was incomplete");
+    }
 
-app.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+    const ingredientsHTML =
+      recipeData.recipeIngredient
+        .map(item => `<li>${item}</li>`)
+        .join("");
+
+    const instructionsHTML =
+      recipeData.recipeInstructions
+        .map(item => `<li>${item}</li>`)
+        .join("");
+
+    recipeResultDiv.innerHTML = `
+      <h3>Ingredients</h3>
+      <ul>
+        ${ingredientsHTML}
+      </ul>
+
+      <h3>Instructions</h3>
+      <ol>
+        ${instructionsHTML}
+      </ol>
+    `;
+
+  } catch (error) {
+
+    console.error("Fetch failed:", error);
+
+    recipeResultDiv.innerHTML = `
+      <p>
+        Couldn't fetch this recipe.
+      </p>
+      <p>
+        ${error.message}
+      </p>
+    `;
+  }
 });
